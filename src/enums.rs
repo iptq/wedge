@@ -15,9 +15,21 @@ impl From<u32> for Board {
 }
 
 #[derive(Copy, Clone)]
-pub enum MotionDir {
-    Horizontal,
-    Vertical,
+pub enum Orientation {
+    Both = 0,
+    Horizontal = 1,
+    Vertical = 2,
+}
+
+impl From<u32> for Orientation {
+    fn from(n: u32) -> Self {
+        match n {
+            0 => Orientation::Both,
+            1 => Orientation::Horizontal,
+            2 => Orientation::Vertical,
+            _ => panic!("expecting 0..2, got {}", n),
+        }
+    }
 }
 
 #[derive(Copy, Clone)]

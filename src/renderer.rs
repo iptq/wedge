@@ -1,29 +1,32 @@
 use glium::draw_parameters::{Blend, DrawParameters};
 use glium::index::{NoIndices, PrimitiveType};
-use glium::{Display, Frame, Program, Surface, VertexBuffer};
-use nalgebra::Matrix4;
+use glium::{Display, Frame, Program, Surface, Texture2d, VertexBuffer};
+use nalgebra::{Matrix4, Vector4};
 
-use crate::enums::Shape;
+use crate::enums::{Orientation, Shape};
 use crate::game::Game;
 use crate::{GAME_HEIGHT, GAME_WIDTH};
 
 pub struct Renderer<'a, 'b> {
     target: &'a mut Frame,
     display: &'b Display,
-    program: &'b Program,
+    cell_program: &'b Program,
+    segment_program: &'b Program,
+    segment_texture: &'b Texture2d,
 }
 
 impl<'a, 'b> Renderer<'a, 'b> {
     pub fn new(game: &'b Game, target: &'a mut Frame) -> Self {
-        let program = game.resources.get_shader("cell").unwrap();
         Renderer {
             target,
             display: &game.display,
-            program,
+            cell_program: game.resources.get_shader("cell").unwrap(),
+            segment_program: game.resources.get_shader("segment").unwrap(),
+            segment_texture: game.resources.get_texture("segment").unwrap(),
         }
     }
 
-    pub fn render_cell(&mut self, location: (u32, u32), scale: u32, shape: Shape) {
+    pub fn render_cell(&mut self, location: (u32, u32), scale: u32) {
         #[derive(Copy, Clone)]
         struct Vertex {
             point: [f32; 2],
@@ -32,21 +35,12 @@ impl<'a, 'b> Renderer<'a, 'b> {
 
         let indices = NoIndices(PrimitiveType::TrianglesList);
         let mut vertices = Vec::<Vertex>::new();
-        match shape {
-            Shape::Full => {
-                vertices.push(Vertex { point: [0.0, 0.0] });
-                vertices.push(Vertex { point: [1.0, 0.0] });
-                vertices.push(Vertex { point: [0.0, 1.0] });
-                vertices.push(Vertex { point: [1.0, 1.0] });
-                vertices.push(Vertex { point: [0.0, 1.0] });
-                vertices.push(Vertex { point: [1.0, 0.0] });
-            }
-            _ => {
-                vertices.push(Vertex { point: [0.0, 0.0] });
-                vertices.push(Vertex { point: [1.0, 0.0] });
-                vertices.push(Vertex { point: [0.0, 1.0] });
-            }
-        }
+        vertices.push(Vertex { point: [0.0, 0.0] });
+        vertices.push(Vertex { point: [1.0, 0.0] });
+        vertices.push(Vertex { point: [0.0, 1.0] });
+        vertices.push(Vertex { point: [1.0, 1.0] });
+        vertices.push(Vertex { point: [0.0, 1.0] });
+        vertices.push(Vertex { point: [1.0, 0.0] });
         let vertex_buffer = VertexBuffer::new(self.display, &vertices).unwrap();
 
         let projection =
@@ -55,16 +49,157 @@ impl<'a, 'b> Renderer<'a, 'b> {
         matrix = matrix.append_nonuniform_scaling(&[scale as f32, scale as f32, 1.0].into());
         matrix = matrix.append_translation(&[location.0 as f32, location.1 as f32, 0.0].into());
 
+        let color = Vector4::from([0.6, 0.6, 0.8, 1.0f32]);
+
         let uniforms = uniform! {
             target: *matrix.as_ref(),
             projection: *projection.as_ref(),
+            color: *color.as_ref(),
         };
 
         self.target
             .draw(
                 &vertex_buffer,
                 &indices,
-                &self.program,
+                &self.cell_program,
+                &uniforms,
+                &DrawParameters {
+                    blend: Blend::alpha_blending(),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+    }
+
+    pub fn render_segment(
+        &mut self,
+        location: (u32, u32),
+        scale: u32,
+        color: (f32, f32, f32),
+        orientation: Orientation,
+        shape: Shape,
+    ) {
+        #[derive(Copy, Clone)]
+        struct Vertex {
+            pos: [f32; 2],
+            tex: [f32; 2],
+        }
+        implement_vertex!(Vertex, pos, tex);
+
+        let indices = NoIndices(PrimitiveType::TrianglesList);
+        let mut vertices = Vec::new();
+        match shape {
+            Shape::BottomLeft => {
+                vertices.push(Vertex {
+                    pos: [1.0, 1.0],
+                    tex: [1.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [1.0, 0.0],
+                    tex: [1.0, 0.0],
+                });
+                vertices.push(Vertex {
+                    pos: [0.0, 0.0],
+                    tex: [0.0, 0.0],
+                });
+            }
+            Shape::TopLeft => {
+                vertices.push(Vertex {
+                    pos: [0.0, 1.0],
+                    tex: [0.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [1.0, 1.0],
+                    tex: [1.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [1.0, 0.0],
+                    tex: [1.0, 0.0],
+                });
+            }
+            Shape::TopRight => {
+                vertices.push(Vertex {
+                    pos: [1.0, 1.0],
+                    tex: [1.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [0.0, 1.0],
+                    tex: [0.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [0.0, 0.0],
+                    tex: [0.0, 0.0],
+                });
+            }
+            Shape::BottomRight => {
+                vertices.push(Vertex {
+                    pos: [0.0, 1.0],
+                    tex: [0.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [1.0, 0.0],
+                    tex: [1.0, 0.0],
+                });
+                vertices.push(Vertex {
+                    pos: [0.0, 0.0],
+                    tex: [0.0, 0.0],
+                });
+            }
+            _ => {
+                vertices.push(Vertex {
+                    pos: [0.0, 1.0],
+                    tex: [0.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [1.0, 0.0],
+                    tex: [1.0, 0.0],
+                });
+                vertices.push(Vertex {
+                    pos: [0.0, 0.0],
+                    tex: [0.0, 0.0],
+                });
+                vertices.push(Vertex {
+                    pos: [0.0, 1.0],
+                    tex: [0.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [1.0, 1.0],
+                    tex: [1.0, 1.0],
+                });
+                vertices.push(Vertex {
+                    pos: [1.0, 0.0],
+                    tex: [1.0, 0.0],
+                });
+            }
+        }
+        let vertex_buffer = VertexBuffer::new(self.display, &vertices).unwrap();
+        let tint = Vector4::from([color.0, color.1, color.2, 1.0f32]);
+
+        let projection =
+            glm::ortho::<f32>(0.0, GAME_WIDTH as f32, GAME_HEIGHT as f32, 0.0, -1.0, 1.0);
+        let mut matrix = Matrix4::<f32>::identity();
+        matrix = matrix.append_nonuniform_scaling(&[scale as f32, scale as f32, 1.0].into());
+        matrix = matrix.append_translation(&[location.0 as f32, location.1 as f32, 0.0].into());
+
+        let rotate_texture = match orientation {
+            Orientation::Both => false,
+            Orientation::Vertical => true,
+            Orientation::Horizontal => false,
+        };
+
+        let uniforms = uniform! {
+            target: *matrix.as_ref(),
+            rotate_texture: rotate_texture,
+            projection: *projection.as_ref(),
+            tint: *tint.as_ref(),
+            tex: self.segment_texture,
+        };
+
+        self.target
+            .draw(
+                &vertex_buffer,
+                &indices,
+                &self.segment_program,
                 &uniforms,
                 &DrawParameters {
                     blend: Blend::alpha_blending(),

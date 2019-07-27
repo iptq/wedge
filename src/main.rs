@@ -13,10 +13,9 @@ mod resources;
 
 use std::time::Instant;
 
-use glium::glutin::{
-    dpi::PhysicalSize, ContextBuilder, Event, EventsLoop, WindowBuilder, WindowEvent,
-};
-use glium::{Display, Rect};
+use glium::glutin::dpi::PhysicalSize;
+use glium::glutin::{ContextBuilder, Event, EventsLoop, WindowBuilder, WindowEvent};
+use glium::{Display, Rect, Surface};
 
 use crate::game::Game;
 
@@ -36,6 +35,12 @@ fn main() {
     let cb = ContextBuilder::new();
     let display = Display::new(wb, cb, &events_loop).unwrap();
 
+    {
+        let gl_window = display.gl_window();
+        let window = gl_window.window();
+        println!("size: {:?}", window.get_inner_size());
+    }
+
     let game = Game::new(&display);
 
     let mut closed = false;
@@ -53,6 +58,7 @@ fn main() {
         });
 
         let mut target = display.draw();
+        target.clear(None, Some((0.0, 0.0, 0.0, 1.0)), true, None, None);
         let mut renderer = game.create_renderer(&mut target);
         game.render(&mut renderer);
         target.finish().unwrap();

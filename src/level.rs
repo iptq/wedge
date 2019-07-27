@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::data::LevelData;
-use crate::enums::{Board, Shape};
+use crate::enums::{Board, Orientation, Shape};
 use crate::renderer::Renderer;
 use crate::{GAME_HEIGHT, GAME_WIDTH};
 
@@ -13,6 +13,9 @@ pub struct Level {
 
 #[derive(Clone)]
 pub struct Block {
+    position: (u32, u32),
+    color: (f32, f32, f32),
+    orientation: Orientation,
     segments: Vec<Segment>,
 }
 
@@ -28,6 +31,7 @@ impl Level {
             .blocks
             .iter()
             .map(|block| {
+                let position = (block.position[0], block.position[1]);
                 let segments = block
                     .segments
                     .iter()
@@ -35,7 +39,18 @@ impl Level {
                         Segment(segment[0], segment[1], segment[2].into(), segment[3].into())
                     })
                     .collect();
-                Block { segments }
+                let orientation = block.orientation.into();
+                let color = (
+                    block.color[0] as f32 / 256.0,
+                    block.color[1] as f32 / 256.0,
+                    block.color[2] as f32 / 256.0,
+                );
+                Block {
+                    position,
+                    color,
+                    segments,
+                    orientation,
+                }
             })
             .collect();
 
@@ -70,6 +85,25 @@ impl Level {
             offset.1 + 2 * scale,
         );
 
-        renderer.render_cell(left_off, 50, Shape::Full);
+        // render the grid
+        for x in 0..self.dimensions.0 {
+            for y in 0..self.dimensions.1 {
+                renderer.render_cell((left_off.0 + x * scale, left_off.1 + y * scale), scale);
+                renderer.render_cell((right_off.0 + x * scale, right_off.1 + y * scale), scale);
+            }
+        }
+
+        // render blocks
+        for block in self.blocks.iter() {
+            for segment in block.segments.iter() {
+                let offset = match &segment.3 {
+                    Board::Left => left_off,
+                    Board::Right => right_off,
+                };
+                let coord = (segment.0 + block.position.0, segment.1 + block.position.1);
+                let location = (offset.0 + coord.0 * scale, offset.1 + coord.1 * scale);
+                renderer.render_segment(location, scale, block.color, block.orientation, segment.2);
+            }
+        }
     }
 }

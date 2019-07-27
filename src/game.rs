@@ -6,8 +6,12 @@ use crate::level::Level;
 use crate::renderer::Renderer;
 use crate::resources::Resources;
 
+const SEGMENT_VERT: &str = include_str!("../shaders/segment.vert");
+const SEGMENT_FRAG: &str = include_str!("../shaders/segment.frag");
 const CELL_VERT: &str = include_str!("../shaders/cell.vert");
 const CELL_FRAG: &str = include_str!("../shaders/cell.frag");
+
+const SEGMENT_IMAGE: &[u8] = include_bytes!("../textures/segment.png");
 
 const LEVEL_TUTORIAL: &str = include_str!("../levels/tutorial.json");
 
@@ -21,6 +25,12 @@ pub struct Game<'a> {
 impl<'a> Game<'a> {
     pub fn new(display: &'a Display) -> Game {
         let mut resources = Resources::default();
+        resources
+            .load_image_from_memory(display, "segment", &SEGMENT_IMAGE, false)
+            .unwrap();
+        resources
+            .load_shader(display, "segment", &SEGMENT_VERT, &SEGMENT_FRAG)
+            .unwrap();
         resources
             .load_shader(display, "cell", &CELL_VERT, &CELL_FRAG)
             .unwrap();

@@ -7,7 +7,7 @@ pub struct PlayerData {
 #[derive(Debug, Deserialize)]
 pub struct BlockData {
     pub movable: bool,
-    pub push_dir: u32,
+    pub orientation: u32,
     pub position: [u32; 2],
     pub color: [u32; 3],
     pub segments: Vec<[u32; 4]>,
