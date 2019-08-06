@@ -1,6 +1,6 @@
 #[derive(Debug, Deserialize)]
 pub struct PlayerData {
-    pub position: [u32; 2],
+    pub position: [i32; 2],
     pub color: [u32; 3],
 }
 
@@ -8,9 +8,9 @@ pub struct PlayerData {
 pub struct BlockData {
     pub movable: bool,
     pub orientation: u32,
-    pub position: [u32; 2],
+    pub position: [i32; 2],
     pub color: [u32; 3],
-    pub segments: Vec<[u32; 4]>,
+    pub segments: Vec<[i32; 4]>,
 }
 
 #[derive(Debug, Deserialize)]

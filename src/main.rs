@@ -41,7 +41,7 @@ fn main() {
         println!("size: {:?}", window.get_inner_size());
     }
 
-    let game = Game::new(&display);
+    let mut game = Game::new(&display);
 
     let mut closed = false;
     let mut prev = Instant::now();
@@ -54,8 +54,10 @@ fn main() {
                 event: WindowEvent::CloseRequested,
                 ..
             } => closed = true,
-            _ => (),
+            _ => game.handle_event(event),
         });
+
+        game.update(delta);
 
         let mut target = display.draw();
         target.clear(None, Some((0.0, 0.0, 0.0, 1.0)), true, None, None);

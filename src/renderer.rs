@@ -5,9 +5,9 @@ use nalgebra::{Matrix4, Vector4};
 
 use crate::enums::{Orientation, Shape};
 use crate::game::Game;
-use crate::{GAME_HEIGHT, GAME_WIDTH};
 
 pub struct Renderer<'a, 'b> {
+    pub window: (f32, f32),
     target: &'a mut Frame,
     display: &'b Display,
     cell_program: &'b Program,
@@ -18,6 +18,10 @@ pub struct Renderer<'a, 'b> {
 impl<'a, 'b> Renderer<'a, 'b> {
     pub fn new(game: &'b Game, target: &'a mut Frame) -> Self {
         Renderer {
+            window: (
+                game.resources.window_dimensions.0 as f32,
+                game.resources.window_dimensions.1 as f32,
+            ),
             target,
             display: &game.display,
             cell_program: game.resources.get_shader("cell").unwrap(),
@@ -26,7 +30,7 @@ impl<'a, 'b> Renderer<'a, 'b> {
         }
     }
 
-    pub fn render_cell(&mut self, location: (u32, u32), scale: u32) {
+    pub fn render_cell(&mut self, location: (i32, i32), scale: i32) {
         #[derive(Copy, Clone)]
         struct Vertex {
             point: [f32; 2],
@@ -43,8 +47,14 @@ impl<'a, 'b> Renderer<'a, 'b> {
         vertices.push(Vertex { point: [1.0, 0.0] });
         let vertex_buffer = VertexBuffer::new(self.display, &vertices).unwrap();
 
-        let projection =
-            glm::ortho::<f32>(0.0, GAME_WIDTH as f32, GAME_HEIGHT as f32, 0.0, -1.0, 1.0);
+        let projection = glm::ortho::<f32>(
+            0.0,
+            self.window.0 as f32,
+            self.window.1 as f32,
+            0.0,
+            -1.0,
+            1.0,
+        );
         let mut matrix = Matrix4::<f32>::identity();
         matrix = matrix.append_nonuniform_scaling(&[scale as f32, scale as f32, 1.0].into());
         matrix = matrix.append_translation(&[location.0 as f32, location.1 as f32, 0.0].into());
@@ -73,8 +83,8 @@ impl<'a, 'b> Renderer<'a, 'b> {
 
     pub fn render_segment(
         &mut self,
-        location: (u32, u32),
-        scale: u32,
+        location: (i32, i32),
+        scale: i32,
         color: (f32, f32, f32),
         orientation: Orientation,
         shape: Shape,
@@ -175,8 +185,14 @@ impl<'a, 'b> Renderer<'a, 'b> {
         let vertex_buffer = VertexBuffer::new(self.display, &vertices).unwrap();
         let tint = Vector4::from([color.0, color.1, color.2, 1.0f32]);
 
-        let projection =
-            glm::ortho::<f32>(0.0, GAME_WIDTH as f32, GAME_HEIGHT as f32, 0.0, -1.0, 1.0);
+        let projection = glm::ortho::<f32>(
+            0.0,
+            self.window.0 as f32,
+            self.window.1 as f32,
+            0.0,
+            -1.0,
+            1.0,
+        );
         let mut matrix = Matrix4::<f32>::identity();
         matrix = matrix.append_nonuniform_scaling(&[scale as f32, scale as f32, 1.0].into());
         matrix = matrix.append_translation(&[location.0 as f32, location.1 as f32, 0.0].into());
