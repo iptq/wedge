@@ -3,6 +3,7 @@ use glium::index::{NoIndices, PrimitiveType};
 use glium::{Display, Frame, Program, Surface, Texture2d, VertexBuffer};
 use nalgebra::{Matrix4, Vector4};
 
+use crate::color::Color;
 use crate::enums::{Orientation, Shape};
 use crate::game::Game;
 
@@ -85,7 +86,7 @@ impl<'a, 'b> Renderer<'a, 'b> {
         &mut self,
         location: (i32, i32),
         scale: i32,
-        color: (f32, f32, f32),
+        color: Color,
         orientation: Orientation,
         shape: Shape,
     ) {
@@ -199,6 +200,7 @@ impl<'a, 'b> Renderer<'a, 'b> {
 
         let rotate_texture = match orientation {
             Orientation::Both => false,
+            Orientation::None => false,
             Orientation::Vertical => true,
             Orientation::Horizontal => false,
         };

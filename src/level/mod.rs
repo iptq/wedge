@@ -1,8 +1,17 @@
+mod block;
+mod cell_map;
+mod player;
+
 use std::collections::{HashMap, VecDeque};
 
+use crate::color::Color;
 use crate::data::LevelData;
 use crate::enums::{Board, Orientation, PushDir, Shape};
 use crate::renderer::Renderer;
+
+use self::block::{Block, Blockish};
+use self::cell_map::{CellContents, CellMap};
+use self::player::Player;
 
 pub struct Level {
     dimensions: (u32, u32),
@@ -13,22 +22,11 @@ pub struct Level {
     player2: Player,
 }
 
-#[derive(Clone)]
-pub struct Block {
-    movable: bool,
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+pub struct Segment {
     position: (i32, i32),
-    color: (f32, f32, f32),
-    orientation: Orientation,
-    segments: Vec<Segment>,
-}
-
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
-pub struct Segment(i32, i32, Shape, Board);
-
-#[derive(Copy, Clone)]
-pub struct Player {
-    pub position: [i32; 2],
-    pub color: [u32; 3],
+    shape: Shape,
+    board: Board,
 }
 
 impl Level {
@@ -36,48 +34,48 @@ impl Level {
         let data: LevelData = json5::from_str(data.as_ref()).unwrap();
         println!("{:?}", data);
 
+        let mut cell_map = CellMap::new();
+
         let blocks = data
             .blocks
             .iter()
-            .map(|block| {
-                let movable = block.movable;
-                let position = (block.position[0], block.position[1]);
-                let segments = block
-                    .segments
-                    .iter()
-                    .map(|segment| {
-                        Segment(segment[0], segment[1], segment[2].into(), segment[3].into())
-                    })
-                    .collect();
-                let orientation = block.orientation.into();
-                let color = (
-                    block.color[0] as f32 / 256.0,
-                    block.color[1] as f32 / 256.0,
-                    block.color[2] as f32 / 256.0,
-                );
-                Block {
-                    movable,
-                    position,
-                    color,
-                    segments,
-                    orientation,
+            .enumerate()
+            .map(|(i, block)| {
+                let block = Block::from_data(i, block);
+                for segment in block.get_segments() {
+                    cell_map.add(
+                        (segment.position.0, segment.position.1, segment.board),
+                        i,
+                        &segment,
+                    );
                 }
+                block
             })
             .collect();
 
         let player1 = Player {
             position: data.player1.position,
-            color: data.player1.color,
+            color: data.player1.color.into(),
         };
         let player2 = Player {
             position: data.player2.position,
-            color: data.player2.color,
+            color: data.player2.color.into(),
         };
+        cell_map.add_player((
+            data.player1.position.0,
+            data.player1.position.1,
+            Board::Left,
+        ));
+        cell_map.add_player((
+            data.player2.position.0,
+            data.player2.position.1,
+            Board::Right,
+        ));
 
         Level {
             dimensions: (data.dimensions[0], data.dimensions[1]),
             move_stack: VecDeque::new(),
-            cell_map: CellMap::new(),
+            cell_map,
             blocks,
             player1,
             player2,
@@ -87,7 +85,7 @@ impl Level {
     // player1: true -> player1, false -> player2
     // TODO: don't use a boolean here
     pub fn handle_movement(&mut self, player1: bool, direction: PushDir) -> bool {
-        let mut player = if player1 {
+        let player = if player1 {
             &self.player1
         } else {
             &self.player2
@@ -95,8 +93,8 @@ impl Level {
 
         // TODO: check out of bounds
         let movement = direction.as_pair();
-        let x = player.position[0] + movement.0;
-        let y = player.position[1] + movement.1;
+        let x = player.position.0 + movement.0;
+        let y = player.position.1 + movement.1;
 
         let result = self.can_move(player1, direction).clone();
         let mut player = if player1 {
@@ -106,13 +104,15 @@ impl Level {
         };
 
         if let Some(_) = result {
-            player.position[0] = x;
-            player.position[1] = y;
+            player.position.0 = x;
+            player.position.1 = y;
             true
         } else {
             false
         }
     }
+
+    pub fn try_move(&self) {}
 
     // TODO: don't use a boolean here
     pub fn can_move(&self, player1: bool, direction: PushDir) -> Option<()> {
@@ -120,7 +120,9 @@ impl Level {
         #[derive(Copy, Clone, PartialOrd, PartialEq)]
         struct ASegment(i32, i32, Shape, Board);
 
-        fn can_push(src: Segment, dst: Segment) -> bool {
+        struct PushMap(CellMap);
+
+        fn can_push_segment(src: ASegment, dst: ASegment) -> bool {
             if src.3 != dst.3 {
                 return false;
             }
@@ -130,14 +132,14 @@ impl Level {
 
         let player = if player1 {
             (
-                self.player1.position[0],
-                self.player1.position[1],
+                self.player1.position.0,
+                self.player1.position.1,
                 Board::Left,
             )
         } else {
             (
-                self.player2.position[0],
-                self.player2.position[1],
+                self.player2.position.0,
+                self.player2.position.1,
                 Board::Right,
             )
         };
@@ -153,7 +155,9 @@ impl Level {
         }
 
         // check if we're sharing a triangle cell
-        if let CellContents::Double(a, b) = self.cell_map.get(player) {}
+        if let CellContents::Double(a, b) = self.cell_map.get(player) {
+            // get the shape of the other block
+        }
 
         // 08/06 pickup
         // need to determine whether or not segment should hold a reference back to block or not?
@@ -204,14 +208,22 @@ impl Level {
 
         // render blocks
         for block in self.blocks.iter() {
-            for segment in block.segments.iter() {
-                let offset = match &segment.3 {
+            for segment in block.get_segments().iter() {
+                let offset = match &segment.board {
                     Board::Left => left_off,
                     Board::Right => right_off,
                 };
-                let coord = (segment.0 + block.position.0, segment.1 + block.position.1);
-                let location = (offset.0 + coord.0 * scale, offset.1 + coord.1 * scale);
-                renderer.render_segment(location, scale, block.color, block.orientation, segment.2);
+                let location = (
+                    offset.0 + segment.position.0 * scale,
+                    offset.1 + segment.position.1 * scale,
+                );
+                renderer.render_segment(
+                    location,
+                    scale,
+                    block.get_color(),
+                    block.get_orientation(),
+                    segment.shape,
+                );
             }
         }
 
@@ -228,75 +240,15 @@ impl Level {
         offset: (i32, i32),
     ) {
         let location = (
-            offset.0 + player.position[0] * scale + 4,
-            offset.1 + player.position[1] * scale + 4,
+            offset.0 + player.position.0 * scale + 4,
+            offset.1 + player.position.1 * scale + 4,
         );
         renderer.render_segment(
             location,
             (scale - 8),
-            (
-                player.color[0] as f32,
-                player.color[1] as f32,
-                player.color[2] as f32,
-            ),
+            player.color,
             Orientation::Both,
             Shape::Full,
         );
-    }
-}
-
-struct CellMap(HashMap<(i32, i32, Board), CellContents>);
-
-#[derive(Copy, Clone)]
-enum CellContents {
-    Empty,
-    Player,
-    Single(Segment),
-
-    // invariant: .0 < .1
-    Double(Segment, Segment),
-}
-
-impl CellMap {
-    pub fn new() -> Self {
-        CellMap(HashMap::new())
-    }
-
-    pub fn get(&self, loc: (i32, i32, Board)) -> CellContents {
-        self.0
-            .get(&loc)
-            .cloned()
-            .unwrap_or_else(|| CellContents::Empty)
-    }
-
-    pub fn clear(&mut self, loc: (i32, i32, Board)) {
-        self.0.remove(&loc);
-    }
-
-    pub fn add(&mut self, loc: (i32, i32, Board), segment: &Segment) -> bool {
-        let contents = self.get(loc).clone();
-        match contents {
-            CellContents::Empty => {
-                // just add it like normal
-                self.0.insert(loc, CellContents::Single(*segment));
-                true
-            }
-            CellContents::Single(existing) => {
-                if existing.2.is_opposite(&segment.2) {
-                    self.0.insert(
-                        loc,
-                        if *segment < existing {
-                            CellContents::Double(*segment, existing)
-                        } else {
-                            CellContents::Double(existing, *segment)
-                        },
-                    );
-                    true
-                } else {
-                    false
-                }
-            }
-            CellContents::Player | CellContents::Double(_, _) => false,
-        }
     }
 }

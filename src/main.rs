@@ -4,6 +4,7 @@ extern crate nalgebra_glm as glm;
 #[macro_use]
 extern crate serde_derive;
 
+mod color;
 mod data;
 mod enums;
 mod game;

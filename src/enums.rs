@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-#[derive(Eq, PartialEq, Hash, PartialOrd, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, PartialOrd, Copy, Clone)]
 pub enum Board {
     Left = 0,
     Right = 1,
@@ -18,9 +18,10 @@ impl From<i32> for Board {
 
 #[derive(Copy, Clone)]
 pub enum Orientation {
-    Both = 0,
+    None = 0,
     Horizontal = 1,
     Vertical = 2,
+    Both = 3,
 }
 
 impl From<u32> for Orientation {
@@ -62,7 +63,7 @@ impl Add<PushDir> for (i32, i32, Board) {
     }
 }
 
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub enum Shape {
     Full = 0,
     TopRight = 1,
@@ -85,6 +86,17 @@ impl From<i32> for Shape {
 }
 
 impl Shape {
+    pub fn opposite(&self) -> Shape {
+        use Shape::*;
+        match self {
+            TopRight => BottomLeft,
+            BottomLeft => TopRight,
+            TopLeft => BottomRight,
+            BottomRight => TopLeft,
+            Full => Full,
+        }
+    }
+
     pub fn is_opposite(&self, other: &Shape) -> bool {
         use Shape::*;
         match (self, other) {

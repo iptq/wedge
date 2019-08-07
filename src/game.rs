@@ -92,7 +92,7 @@ impl<'a> Game<'a> {
         macro_rules! shit {
             ($key:expr, $player:expr, $movement:expr) => {
                 if self.is_pressed(&$key) {
-                    let mut level = self.get_current_level_mut();
+                    let level = self.get_current_level_mut();
                     level.handle_movement($player, $movement);
                     self.keymap.insert($key, false);
                 }
