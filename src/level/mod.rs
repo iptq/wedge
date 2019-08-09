@@ -114,6 +114,34 @@ impl Level {
 
     pub fn try_move(&self) {}
 
+    fn block_can_move(&self, block: impl Blockish) {
+        for segment in block.get_segments() {}
+    }
+
+    fn segment_can_move(&self, block: Block, segment: Segment, direction: PushDir) -> Option<()> {
+        let triple = (segment.position.0, segment.position.1, segment.board);
+        let target = triple + direction;
+
+        // is the target in the map?
+        if target.0 < 0
+            || target.0 >= self.dimensions.0 as i32
+            || target.1 < 0
+            || target.1 >= self.dimensions.1 as i32
+        {
+            return None;
+        }
+
+        // check if we're sharing a triangle cell
+        if let CellContents::Double((ind1, block1), (ind2, block2)) = self.cell_map.get(triple) {
+            // figure out which one is the other block
+
+            // check that we're pushing in the direction of the other block
+
+        }
+
+        Some(())
+    }
+
     // TODO: don't use a boolean here
     pub fn can_move(&self, player1: bool, direction: PushDir) -> Option<()> {
         // an absolute segment (as opposed to relative to a block)

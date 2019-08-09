@@ -4,6 +4,7 @@ use std::time::Duration;
 use glium::glutin::{ElementState, Event, VirtualKeyCode, WindowEvent};
 use glium::{Display, Frame};
 
+use crate::animations::AnimationState;
 use crate::enums::PushDir;
 use crate::level::Level;
 use crate::renderer::Renderer;
@@ -18,12 +19,15 @@ const SEGMENT_IMAGE: &[u8] = include_bytes!("../textures/segment.png");
 
 const LEVEL_TUTORIAL: &str = include_str!("../levels/tutorial.json");
 
+const ANIMATION_SPEED: f32 = 6.0;
+
 pub struct Game<'a> {
     pub resources: Resources,
     pub display: &'a Display,
     levels: Vec<Level>,
     current_level: usize,
     keymap: HashMap<VirtualKeyCode, bool>,
+    animations: AnimationState,
 }
 
 impl<'a> Game<'a> {
@@ -46,6 +50,7 @@ impl<'a> Game<'a> {
             levels,
             current_level: 0,
             keymap: HashMap::new(),
+            animations: AnimationState::default(),
         }
     }
 
@@ -93,21 +98,37 @@ impl<'a> Game<'a> {
             ($key:expr, $player:expr, $movement:expr) => {
                 if self.is_pressed(&$key) {
                     let level = self.get_current_level_mut();
-                    level.handle_movement($player, $movement);
+                    let result = level.handle_movement($player, $movement);
                     self.keymap.insert($key, false);
                 }
             };
         }
 
-        shit!(VirtualKeyCode::W, true, PushDir::Up);
-        shit!(VirtualKeyCode::A, true, PushDir::Left);
-        shit!(VirtualKeyCode::S, true, PushDir::Down);
-        shit!(VirtualKeyCode::D, true, PushDir::Right);
+        if self.animations.is_animating {
+            let delta_ms = delta.as_millis();
+            if self.animations.last_move_success {
+            } else {
+            }
+        } else {
+            shit!(VirtualKeyCode::W, true, PushDir::Up);
+            shit!(VirtualKeyCode::A, true, PushDir::Left);
+            shit!(VirtualKeyCode::S, true, PushDir::Down);
+            shit!(VirtualKeyCode::D, true, PushDir::Right);
 
-        shit!(VirtualKeyCode::I, false, PushDir::Up);
-        shit!(VirtualKeyCode::J, false, PushDir::Left);
-        shit!(VirtualKeyCode::K, false, PushDir::Down);
-        shit!(VirtualKeyCode::L, false, PushDir::Right);
+            shit!(VirtualKeyCode::I, false, PushDir::Up);
+            shit!(VirtualKeyCode::J, false, PushDir::Left);
+            shit!(VirtualKeyCode::K, false, PushDir::Down);
+            shit!(VirtualKeyCode::L, false, PushDir::Right);
+
+            // failed a move
+            if !self.animations.last_move_success {
+                self.animations
+                    .begin_transition(Box::new(|mut offsets, prog| {
+                        offsets.insert(0, (0, 0));
+                        offsets
+                    }));
+            }
+        }
     }
 
     pub fn render(&self, renderer: &mut Renderer) {

@@ -13,6 +13,7 @@ pub trait Blockish {
 
 #[derive(Clone)]
 pub struct Block {
+    index: usize,
     movable: bool,
     position: (i32, i32),
     color: Color,
@@ -39,6 +40,7 @@ impl Block {
         let orientation = data.orientation.into();
         let color = Color::from_rgb_u32(data.color.0, data.color.1, data.color.2);
         Block {
+            index,
             movable,
             position,
             color,
