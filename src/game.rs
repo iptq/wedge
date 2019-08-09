@@ -105,8 +105,10 @@ impl<'a> Game<'a> {
         }
 
         if self.animations.is_animating {
-            let delta_ms = delta.as_millis();
             if self.animations.last_move_success {
+                if self.animations.is_done() {
+                    self.animations.make_progress(delta);
+                }
             } else {
             }
         } else {
@@ -122,17 +124,17 @@ impl<'a> Game<'a> {
 
             // failed a move
             if !self.animations.last_move_success {
-                self.animations
-                    .begin_transition(Box::new(|mut offsets, prog| {
-                        offsets.insert(0, (0, 0));
-                        offsets
-                    }));
+                let func = |mut offsets: HashMap<_, _>, prog| {
+                    offsets.insert(0, (0, 0));
+                    offsets
+                };
+                self.animations.begin_transition(Box::new(func));
             }
         }
     }
 
     pub fn render(&self, renderer: &mut Renderer) {
         let level = self.get_current_level();
-        level.render(renderer);
+        level.render(renderer, &self.animations.block_offsets);
     }
 }

@@ -4,6 +4,7 @@ mod player;
 
 use std::collections::{HashMap, VecDeque};
 
+use crate::animations::BlockOffsets;
 use crate::color::Color;
 use crate::data::LevelData;
 use crate::enums::{Board, Orientation, PushDir, Shape};
@@ -197,7 +198,7 @@ impl Level {
         Some(())
     }
 
-    pub fn render(&self, renderer: &mut Renderer) {
+    pub fn render(&self, renderer: &mut Renderer, block_offsets: &BlockOffsets) {
         // board positioning calculations
         let playfield_ratio = (2 * self.dimensions.0 + 6) as f32 / (self.dimensions.1 + 4) as f32;
         let screen_ratio = renderer.window.0 / renderer.window.1;
@@ -215,10 +216,16 @@ impl Level {
             (scale, xoff, 0)
         };
 
-        self.render_boards(renderer, scale, (xoff, yoff));
+        self.render_boards(renderer, scale, (xoff, yoff), block_offsets);
     }
 
-    fn render_boards(&self, renderer: &mut Renderer, scale: i32, offset: (i32, i32)) {
+    fn render_boards(
+        &self,
+        renderer: &mut Renderer,
+        scale: i32,
+        offset: (i32, i32),
+        block_offsets: &BlockOffsets,
+    ) {
         let left_off = (offset.0 + 2 * scale, offset.1 + 2 * scale);
         let right_off = (
             offset.0 + (4 + self.dimensions.0 as i32) * scale,

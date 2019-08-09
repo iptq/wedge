@@ -1,7 +1,8 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
-type BlockOffsets = HashMap<usize, (u32, u32)>;
-type AnimationFn = Box<Fn(BlockOffsets, f32) -> BlockOffsets>;
+pub type BlockOffsets = HashMap<usize, (u32, u32)>;
+pub type AnimationFn = Box<Fn(BlockOffsets, f32) -> BlockOffsets>;
 
 #[derive(Default)]
 pub struct AnimationState {
@@ -18,5 +19,11 @@ impl AnimationState {
         self.is_animating = true;
         self.progress = 0.0;
         self.progress_function = Some(f);
+    }
+
+    pub fn make_progress(&mut self, delta: Duration) {}
+
+    pub fn is_done(&self) -> bool {
+        self.progress > 1.0
     }
 }
