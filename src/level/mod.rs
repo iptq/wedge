@@ -20,6 +20,8 @@ pub struct Level {
     blocks: Vec<Block>,
     player1: Player,
     player2: Player,
+    goal1: (u32, u32),
+    goal2: (u32, u32),
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
@@ -66,7 +68,17 @@ impl Level {
             blocks,
             player1,
             player2,
+            goal1: data.goal1,
+            goal2: data.goal2,
         }
+    }
+
+    // check if we won
+    pub fn check_win_condition(&self) -> bool {
+        self.player1.position.0 as u32 == self.goal1.0
+            && self.player1.position.1 as u32 == self.goal1.1
+            && self.player2.position.0 as u32 == self.goal2.0
+            && self.player2.position.1 as u32 == self.goal2.1
     }
 
     pub fn apply_change_set(&mut self, change_set: ChangeSet) {

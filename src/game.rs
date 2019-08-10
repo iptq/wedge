@@ -119,6 +119,7 @@ impl<'a> Game<'a> {
                 if let Some(change_set) = change_set {
                     let level = self.get_current_level_mut();
                     level.apply_change_set(change_set.clone());
+                    self.check_win_condition();
                 }
             }
         } else {
@@ -131,6 +132,14 @@ impl<'a> Game<'a> {
             shit!(VirtualKeyCode::J, Board::Right, PushDir::Left);
             shit!(VirtualKeyCode::K, Board::Right, PushDir::Down);
             shit!(VirtualKeyCode::L, Board::Right, PushDir::Right);
+        }
+    }
+
+    fn check_win_condition(&mut self) {
+        let level = self.get_current_level();
+        if level.check_win_condition() {
+            // go on to the next level
+            self.current_level += 1;
         }
     }
 

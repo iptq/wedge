@@ -8,7 +8,6 @@ pub struct PlayerData {
 pub struct BlockData {
     pub movable: bool,
     pub orientation: u32,
-    pub position: (i32, i32),
     pub color: (u32, u32, u32),
     pub segments: Vec<[i32; 4]>,
 }
@@ -18,7 +17,7 @@ pub struct LevelData {
     pub dimensions: [u32; 2],
     pub player1: PlayerData,
     pub player2: PlayerData,
-    pub goal1: [u32; 2],
-    pub goal2: [u32; 2],
+    pub goal1: (u32, u32),
+    pub goal2: (u32, u32),
     pub blocks: Vec<BlockData>,
 }
