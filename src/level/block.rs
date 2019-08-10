@@ -26,13 +26,10 @@ impl Block {
         let segments = data
             .segments
             .iter()
-            .map(|segment| {
-                let seg = Segment {
-                    position: (segment[0], segment[1]),
-                    shape: segment[2].into(),
-                    board: segment[3].into(),
-                };
-                seg
+            .map(|segment| Segment {
+                position: (segment[0], segment[1]),
+                shape: segment[2].into(),
+                board: segment[3].into(),
             })
             .collect();
         let orientation = data.orientation.into();

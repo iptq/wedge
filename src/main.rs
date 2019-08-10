@@ -17,7 +17,7 @@ use std::time::Instant;
 
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::{ContextBuilder, Event, EventsLoop, WindowBuilder, WindowEvent};
-use glium::{Display, Rect, Surface};
+use glium::{Display, Surface};
 
 use crate::game::Game;
 

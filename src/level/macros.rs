@@ -8,16 +8,6 @@ macro_rules! set {
 	}
 }
 
-macro_rules! merge {
-	($(item:expr)*) => {
-		{
-			let mut set = std::collections::HashSet::new();
-			$(set.extend($item);)*
-			set
-		}
-	}
-}
-
 macro_rules! fail_set {
     ($change_set:expr) => {
         $change_set
@@ -34,7 +24,7 @@ macro_rules! entity_fail {
     ($item:expr) => {
         match $item {
             Some(index) => set!(index),
-            None => set!(),
+            None => std::collections::HashSet::new(),
         }
     };
 }

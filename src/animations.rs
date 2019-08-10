@@ -34,6 +34,7 @@ impl AnimationState {
     }
 
     pub fn begin_move_transition(&mut self, result: MoveResult) {
+        println!("result: {:?}", result);
         self.last_move_result = Some(result);
         self.is_animating = true;
         self.progress = 0.0;
@@ -45,12 +46,10 @@ impl AnimationState {
                     for (entity, direction) in change_set {
                         // TODO: implement ease-out?
                         let pair = direction.as_pair();
+                        // cap progress at 1.0, we don't want blocks going past where they're supposed to
+                        let progress = progress.min(1.0);
                         let offset = (pair.0 as f32 * progress, pair.1 as f32 * progress);
-                        println!(
-                            "|| entity: {:?}, direction: {:?} => {:?}",
-                            entity, direction, offset
-                        );
-                        offsets.insert(entity.clone(), offset);
+                        offsets.insert(entity, offset);
                     }
                 }
                 // vibrate all blocking pieces
@@ -64,12 +63,6 @@ impl AnimationState {
             offsets
         };
         self.progress_function = Some(Box::new(func));
-    }
-
-    pub fn begin_transition(&mut self, f: AnimationFn) {
-        self.is_animating = true;
-        self.progress = 0.0;
-        self.progress_function = Some(f);
     }
 
     pub fn make_progress(&mut self, delta: Duration) {
@@ -95,10 +88,6 @@ impl AnimationState {
             self.is_animating = false;
             self.block_offsets = BlockOffsets::new();
         }
-    }
-
-    pub fn is_done(&self) -> bool {
-        self.progress > 1.0
     }
 
     pub fn get_block_offset(&self, index: usize) -> (f32, f32) {

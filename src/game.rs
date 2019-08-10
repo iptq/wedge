@@ -19,8 +19,6 @@ const SEGMENT_IMAGE: &[u8] = include_bytes!("../textures/segment.png");
 
 const LEVEL_TUTORIAL: &str = include_str!("../levels/tutorial.json");
 
-const ANIMATION_SPEED: f32 = 6.0;
-
 pub struct Game<'a> {
     pub resources: Resources,
     pub display: &'a Display,
@@ -55,8 +53,8 @@ impl<'a> Game<'a> {
     }
 
     pub fn handle_event(&mut self, event: Event) {
-        match event {
-            Event::WindowEvent { event, .. } => match event {
+        if let Event::WindowEvent { event, .. } = event {
+            match event {
                 WindowEvent::Resized(size) => self.resources.window_dimensions = size.into(),
                 WindowEvent::KeyboardInput { input, .. } => {
                     if let Some(code) = &input.virtual_keycode {
@@ -68,8 +66,7 @@ impl<'a> Game<'a> {
                     }
                 }
                 _ => (),
-            },
-            _ => (),
+            }
         }
     }
 
@@ -78,15 +75,15 @@ impl<'a> Game<'a> {
     }
 
     pub fn get_current_level(&self) -> &Level {
-        self.levels.iter().nth(self.current_level).unwrap()
+        self.levels.get(self.current_level).unwrap()
     }
 
     pub fn get_current_level_mut(&mut self) -> &mut Level {
-        self.levels.iter_mut().nth(self.current_level).unwrap()
+        self.levels.get_mut(self.current_level).unwrap()
     }
 
-    pub fn is_pressed(&self, code: &VirtualKeyCode) -> bool {
-        if let Some(true) = self.keymap.get(code) {
+    pub fn is_pressed(&self, code: VirtualKeyCode) -> bool {
+        if let Some(true) = self.keymap.get(&code) {
             true
         } else {
             false
@@ -96,7 +93,7 @@ impl<'a> Game<'a> {
     pub fn update(&mut self, delta: Duration) {
         macro_rules! shit {
             ($key:expr, $board:expr, $direction:expr) => {
-                if self.is_pressed(&$key) {
+                if self.is_pressed($key) {
                     println!("pushed: {:?}", $key);
                     let level = self.get_current_level_mut();
                     let result = level.try_move($board, $direction);
@@ -107,7 +104,7 @@ impl<'a> Game<'a> {
         }
 
         if self.animations.is_animating {
-            println!("animating. {:?}", self.animations.progress);
+            // println!("animating. {:?}", self.animations.progress);
             self.animations.make_progress(delta);
 
             // we just finished!
@@ -134,9 +131,6 @@ impl<'a> Game<'a> {
             shit!(VirtualKeyCode::J, Board::Right, PushDir::Left);
             shit!(VirtualKeyCode::K, Board::Right, PushDir::Down);
             shit!(VirtualKeyCode::L, Board::Right, PushDir::Right);
-
-            // failed a move
-            if let Some(Err(fail_set)) = &self.animations.last_move_result {}
         }
     }
 

@@ -2,25 +2,21 @@
 mod macros;
 
 mod block;
-mod cell_map;
 mod player;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::animations::AnimationState;
-use crate::color::Color;
 use crate::data::LevelData;
 use crate::enums::{Board, Orientation, PushDir, Shape};
 use crate::renderer::Renderer;
 
 use self::block::{Block, Blockish};
-use self::cell_map::{CellContents, CellMap};
 use self::player::Player;
 
 pub struct Level {
     dimensions: (u32, u32),
     move_stack: VecDeque<()>,
-    cell_map: CellMap,
     blocks: Vec<Block>,
     player1: Player,
     player2: Player,
@@ -46,25 +42,13 @@ pub type FailSet = HashSet<usize>;
 impl Level {
     pub fn from_json(data: impl AsRef<str>) -> Level {
         let data: LevelData = json5::from_str(data.as_ref()).unwrap();
-        println!("{:?}", data);
-
-        let mut cell_map = CellMap::new();
+        println!("level data: {:?}", data);
 
         let blocks = data
             .blocks
             .iter()
             .enumerate()
-            .map(|(i, block)| {
-                let block = Block::from_data(i, block);
-                for segment in block.get_segments() {
-                    cell_map.add(
-                        (segment.position.0, segment.position.1, segment.board),
-                        i,
-                        &segment,
-                    );
-                }
-                block
-            })
+            .map(|(i, block)| Block::from_data(i, block))
             .collect();
 
         let player1 = Player {
@@ -75,21 +59,10 @@ impl Level {
             position: data.player2.position,
             color: data.player2.color.into(),
         };
-        cell_map.add_player((
-            data.player1.position.0,
-            data.player1.position.1,
-            Board::Left,
-        ));
-        cell_map.add_player((
-            data.player2.position.0,
-            data.player2.position.1,
-            Board::Right,
-        ));
 
         Level {
             dimensions: (data.dimensions[0], data.dimensions[1]),
             move_stack: VecDeque::new(),
-            cell_map,
             blocks,
             player1,
             player2,
@@ -152,7 +125,7 @@ impl Level {
         println!("block_can_move({:?}, {:?})", index, direction);
         let block = match self.blocks.get(index) {
             Some(block) => block,
-            None => return Err(set!()),
+            None => return Err(HashSet::new()),
         };
 
         // is the block even movable?
@@ -247,8 +220,7 @@ impl Level {
         );
 
         // handle special pushes
-        // if-statement disguised as a loop
-        while let Some((other_block, other_shape)) = current_occupant {
+        if let Some((other_block, other_shape)) = current_occupant {
             // are both shapes triangles?
             let both_triangles = match (segment.shape, other_shape) {
                 (Shape::Full, Shape::Full) => false,
@@ -256,28 +228,28 @@ impl Level {
                 // TODO: enumerate them to get rid of invalid states
             };
 
-            // what directions could we be pushing the other block into?
-            let possible_directions = match segment.shape {
-                Shape::TopRight => [PushDir::Up, PushDir::Right],
-                Shape::TopLeft => [PushDir::Left, PushDir::Up],
-                Shape::BottomLeft => [PushDir::Down, PushDir::Left],
-                Shape::BottomRight => [PushDir::Right, PushDir::Down],
-                Shape::Full => unreachable!("already eliminated this possibility"),
-            };
+            if both_triangles {
+                // what directions could we be pushing the other block into?
+                let possible_directions = match segment.shape {
+                    Shape::TopRight => [PushDir::Up, PushDir::Right],
+                    Shape::TopLeft => [PushDir::Left, PushDir::Up],
+                    Shape::BottomLeft => [PushDir::Down, PushDir::Left],
+                    Shape::BottomRight => [PushDir::Right, PushDir::Down],
+                    Shape::Full => unreachable!("already eliminated this possibility"),
+                };
 
-            // does the direction we're pushing appear in this list?
-            if !possible_directions.contains(&direction) {
-                break;
+                // does the direction we're pushing appear in this list?
+                if possible_directions.contains(&direction) {
+                    // the other shape goes in the other direction
+                    let other_direction = {
+                        let mut set = possible_directions.iter().collect::<HashSet<_>>();
+                        set.remove(&direction);
+                        *set.into_iter().next().unwrap()
+                    };
+
+                    return self.block_can_move(other_block, other_direction, change_set);
+                }
             }
-
-            // the other shape goes in the other direction
-            let other_direction = {
-                let mut set = possible_directions.iter().collect::<HashSet<_>>();
-                set.remove(&direction);
-                *set.into_iter().next().unwrap()
-            };
-
-            return self.block_can_move(other_block, other_direction, change_set);
         }
 
         // handle normal pushes
@@ -288,18 +260,20 @@ impl Level {
                     Err(fail_set!(change_set))
                 }
                 Entity::Block(index) => {
+                    if
                     // if it's part of the same block it's ok to push
-                    if block_index.is_some() && block_index.unwrap() == index {
-                        Ok(change_set)
-                    }
+                    block_index.is_some() && block_index.unwrap() == index ||
                     // if the shapes are opposite, we can actually both fit into the same spot
-                    else if segment.shape.is_opposite(&shape) {
+                    segment.shape.is_opposite(shape)
+                    {
                         Ok(change_set)
                     }
                     // if the block is already in the change set, it can't move
                     else if change_set.contains_key(&Entity::Block(index)) {
                         Err(fail_set!(change_set))
-                    } else {
+                    }
+                    // if the next block can move then so can this one
+                    else {
                         self.block_can_move(index, direction, change_set)
                     }
                 }
@@ -414,7 +388,7 @@ impl Level {
         location.1 += (animation_offset.1 * scale as f32) as i32;
         renderer.render_segment(
             location,
-            (scale - 8),
+            scale - 8,
             player.color,
             Orientation::Both,
             Shape::Full,

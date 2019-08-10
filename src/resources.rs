@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use glium::texture::RawImage2d;
 use glium::{Display, Program, ProgramCreationError, Texture2d};
-use image::{DynamicImage, GenericImageView, ImageBuffer, ImageError, Rgba};
+use image::{DynamicImage, GenericImageView, ImageError};
 
 #[derive(Default)]
 pub struct Resources {

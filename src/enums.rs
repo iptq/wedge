@@ -44,7 +44,7 @@ pub enum PushDir {
 }
 
 impl PushDir {
-    pub fn as_pair(&self) -> (i32, i32) {
+    pub fn as_pair(self) -> (i32, i32) {
         match self {
             PushDir::Up => (0, -1),
             PushDir::Down => (0, 1),
@@ -90,25 +90,20 @@ impl From<i32> for Shape {
 }
 
 impl Shape {
-    pub fn opposite(&self) -> Shape {
+    pub fn get_opposite(self) -> Option<Shape> {
         use Shape::*;
         match self {
-            TopRight => BottomLeft,
-            BottomLeft => TopRight,
-            TopLeft => BottomRight,
-            BottomRight => TopLeft,
-            Full => Full,
+            TopRight => Some(BottomLeft),
+            BottomLeft => Some(TopRight),
+            TopLeft => Some(BottomRight),
+            BottomRight => Some(TopLeft),
+            Full => None,
         }
     }
 
-    pub fn is_opposite(&self, other: &Shape) -> bool {
-        use Shape::*;
-        match (self, other) {
-            (TopRight, BottomLeft)
-            | (BottomLeft, TopRight)
-            | (TopLeft, BottomRight)
-            | (BottomRight, TopLeft) => true,
-            _ => false,
-        }
+    pub fn is_opposite(self, other: Shape) -> bool {
+        self.get_opposite()
+            .map(|shape| shape == other)
+            .unwrap_or_else(|| false)
     }
 }
