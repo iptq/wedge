@@ -1,8 +1,11 @@
+#[macro_use]
+mod macros;
+
 mod block;
 mod cell_map;
 mod player;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::animations::AnimationState;
 use crate::color::Color;
@@ -29,6 +32,16 @@ pub struct Segment {
     shape: Shape,
     board: Board,
 }
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub enum Entity {
+    Block(usize),
+    Player(Board),
+}
+
+pub type ChangeSet = HashMap<Entity, PushDir>;
+
+pub type FailSet = HashSet<usize>;
 
 impl Level {
     pub fn from_json(data: impl AsRef<str>) -> Level {
@@ -83,54 +96,95 @@ impl Level {
         }
     }
 
-    // pub fn handle_movement(&mut self, board: Board, direction: PushDir) -> bool {
-    //     let player = match board {
-    //         Board::Left => &self.player1,
-    //         Board::Right => &self.player2
-    //     };
+    pub fn try_move(&mut self, board: Board, direction: PushDir) {
+        let mut change_set = ChangeSet::default();
+        change_set.insert(Entity::Player(board), direction);
 
-    //     // TODO: check out of bounds
-    //     let movement = direction.as_pair();
-    //     let x = player.position.0 + movement.0;
-    //     let y = player.position.1 + movement.1;
+        let result = self.player_can_move(board, direction, change_set);
 
-    //     let result = self.can_move(player1, direction).clone();
-    //     let player = match board {
-    //         Board::Left => &mut self.player1,
-    //         Board::Right => &mut self.player2
-    //     };
-
-    //     if let Some(_) = result {
-    //         player.position.0 = x;
-    //         player.position.1 = y;
-    //         true
-    //     } else {
-    //         false
-    //     }
-    // }
-
-    pub fn try_move(&self, board: Board, direction: PushDir) {
-        let result = self.player_can_move(board, direction);
-        println!("result: {:?}", result);
+        match result {
+            Ok(change_set) => {
+                println!("change_set: {:?}", change_set);
+                for (entity, direction) in change_set {
+                    let direction = direction.as_pair();
+                    match entity {
+                        Entity::Player(board) => {
+                            let player = match board {
+                                Board::Left => &mut self.player1,
+                                Board::Right => &mut self.player2,
+                            };
+                            player.position.0 += direction.0;
+                            player.position.1 += direction.1;
+                        }
+                        Entity::Block(index) => {
+                            let block = self.blocks.get_mut(index).expect("big failure");
+                            for segment in &mut block.segments {
+                                segment.position.0 += direction.0;
+                                segment.position.1 += direction.1;
+                            }
+                        }
+                    }
+                }
+            }
+            Err(fail_set) => {}
+        };
     }
 
-    fn player_can_move(&self, board: Board, direction: PushDir) {}
+    fn player_can_move(
+        &self,
+        board: Board,
+        direction: PushDir,
+        change_set: ChangeSet,
+    ) -> Result<ChangeSet, FailSet> {
+        let player = match board {
+            Board::Left => &self.player1,
+            Board::Right => &self.player2,
+        };
+        let player_segment = Segment {
+            position: player.position,
+            shape: Shape::Full,
+            board,
+        };
+        self.segment_can_move(None, player_segment, direction, change_set)
+    }
 
-    fn block_can_move(&self, index: usize, direction: PushDir) -> Option<()> {
+    fn block_can_move(
+        &self,
+        index: usize,
+        direction: PushDir,
+        mut change_set: ChangeSet,
+    ) -> Result<ChangeSet, FailSet> {
+        println!("block_can_move({:?}, {:?})", index, direction);
         let block = match self.blocks.get(index) {
             Some(block) => block,
-            None => return None,
+            None => return Err(set!()),
         };
 
         // is the block even movable?
         if !block.movable {
-            return None;
+            return Err(set!(index));
         }
 
-        for segment in block.get_segments() {
-            let result = self.segment_can_move(Some(index), segment, direction);
+        // does the direction match the orientation?
+        match (block.orientation, direction) {
+            (Orientation::Horizontal, PushDir::Left)
+            | (Orientation::Horizontal, PushDir::Right)
+            | (Orientation::Vertical, PushDir::Up)
+            | (Orientation::Vertical, PushDir::Down)
+            | (Orientation::Both, _) => (),
+            _ => return Err(set!(index)),
         }
-        Some(())
+
+        // TODO: change this to use &mut instead of returning a new one each time
+        change_set.insert(Entity::Block(index), direction);
+        for segment in block.get_segments() {
+            match self.segment_can_move(Some(index), segment, direction, change_set.clone()) {
+                Ok(new_change_set) => change_set = new_change_set,
+                Err(fail_set) => return Err(fail_set),
+            }
+        }
+
+        Ok(change_set)
     }
 
     fn segment_can_move(
@@ -138,89 +192,128 @@ impl Level {
         block_index: Option<usize>,
         segment: Segment,
         direction: PushDir,
-    ) -> Option<()> {
+        change_set: ChangeSet,
+    ) -> Result<ChangeSet, FailSet> {
+        println!(
+            "segment_can_move({:?}, {:?}, {:?})",
+            block_index, segment, direction
+        );
         let segment_loc = (segment.position.0, segment.position.1, segment.board);
         let target = segment_loc + direction;
-        Some(())
+
+        // is the target actually in the map?
+        if target.0 < 0
+            || target.0 >= self.dimensions.0 as i32
+            || target.1 < 0
+            || target.1 >= self.dimensions.1 as i32
+        {
+            return Err(entity_fail!(block_index));
+        }
+
+        // retrieve other blocks that might be occupying this current space and the target space
+        let mut current_occupant = None;
+        let mut target_occupant = None;
+        for (i, block) in self.blocks.iter().enumerate() {
+            // skip other segments of the same block
+            if let Some(n) = block_index {
+                if n == i {
+                    continue;
+                }
+            }
+
+            // offset from the change set
+            let offset = match change_set.get(&Entity::Block(i)) {
+                Some(direction) => direction.as_pair(),
+                None => (0, 0),
+            };
+
+            for segment in block.get_segments() {
+                // don't get segments on different boards
+                if segment.board != segment_loc.2 {
+                    continue;
+                }
+
+                let mut segment_pos = segment.position;
+                segment_pos.0 += offset.0;
+                segment_pos.1 += offset.1;
+
+                if segment_pos == (segment_loc.0, segment_loc.1) {
+                    current_occupant = Some((i, segment.shape));
+                }
+                if segment_pos == (target.0, target.1) {
+                    target_occupant = Some((Entity::Block(i), segment.shape));
+                }
+            }
+        }
+
+        println!(
+            "  occupants: {:?} | {:?}",
+            current_occupant, target_occupant
+        );
+
+        // handle special pushes
+        // if-statement disguised as a loop
+        while let Some((other_block, other_shape)) = current_occupant {
+            // are both shapes triangles?
+            let both_triangles = match (segment.shape, other_shape) {
+                (Shape::Full, Shape::Full) => false,
+                _ => true,
+                // TODO: enumerate them to get rid of invalid states
+            };
+
+            // what directions could we be pushing the other block into?
+            let possible_directions = match segment.shape {
+                Shape::TopRight => [PushDir::Up, PushDir::Right],
+                Shape::TopLeft => [PushDir::Left, PushDir::Up],
+                Shape::BottomLeft => [PushDir::Down, PushDir::Left],
+                Shape::BottomRight => [PushDir::Right, PushDir::Down],
+                Shape::Full => unreachable!("already eliminated this possibility"),
+            };
+
+            // does the direction we're pushing appear in this list?
+            if !possible_directions.contains(&direction) {
+                break;
+            }
+
+            // the other shape goes in the other direction
+            let other_direction = {
+                let mut set = possible_directions.iter().collect::<HashSet<_>>();
+                set.remove(&direction);
+                *set.into_iter().next().unwrap()
+            };
+
+            return self.block_can_move(other_block, other_direction, change_set);
+        }
+
+        // handle normal pushes
+        if let Some((entity, shape)) = target_occupant {
+            match entity {
+                Entity::Player(_) => {
+                    // TODO: assert that the board is the same
+                    Err(fail_set!(change_set))
+                }
+                Entity::Block(index) => {
+                    // if it's part of the same block it's ok to push
+                    if block_index.is_some() && block_index.unwrap() == index {
+                        Ok(change_set)
+                    }
+                    // if the shapes are opposite, we can actually both fit into the same spot
+                    else if segment.shape.is_opposite(&shape) {
+                        Ok(change_set)
+                    }
+                    // if the block is already in the change set, it can't move
+                    else if change_set.contains_key(&Entity::Block(index)) {
+                        Err(fail_set!(change_set))
+                    } else {
+                        self.block_can_move(index, direction, change_set)
+                    }
+                }
+            }
+        } else {
+            // coast is clear, push away!
+            Ok(change_set)
+        }
     }
-
-    // fn segment_can_move(&self, block: Block, segment: Segment, direction: PushDir) -> Option<()> {
-    //     let triple = (segment.position.0, segment.position.1, segment.board);
-    //     let target = triple + direction;
-
-    //     // is the target in the map?
-    //     if target.0 < 0
-    //         || target.0 >= self.dimensions.0 as i32
-    //         || target.1 < 0
-    //         || target.1 >= self.dimensions.1 as i32
-    //     {
-    //         return None;
-    //     }
-
-    //     // check if we're sharing a triangle cell
-    //     if let CellContents::Double((ind1, block1), (ind2, block2)) = self.cell_map.get(triple) {
-    //         // figure out which one is the other block
-
-    //         // check that we're pushing in the direction of the other block
-
-    //     }
-
-    //     Some(())
-    // }
-
-    // pub fn can_move(&self, board: Board, direction: PushDir) -> Option<()> {
-    //     // an absolute segment (as opposed to relative to a block)
-    //     #[derive(Copy, Clone, PartialOrd, PartialEq)]
-    //     struct ASegment(i32, i32, Shape, Board);
-
-    //     struct PushMap(CellMap);
-
-    //     fn can_push_segment(src: ASegment, dst: ASegment) -> bool {
-    //         if src.3 != dst.3 {
-    //             return false;
-    //         }
-
-    //         true
-    //     }
-
-    //     let player = if player1 {
-    //         (
-    //             self.player1.position.0,
-    //             self.player1.position.1,
-    //             Board::Left,
-    //         )
-    //     } else {
-    //         (
-    //             self.player2.position.0,
-    //             self.player2.position.1,
-    //             Board::Right,
-    //         )
-    //     };
-
-    //     // check to make sure that the player isn't trying to go out of bounds
-    //     let target = player + direction;
-    //     if target.0 < 0
-    //         || target.0 >= self.dimensions.0 as i32
-    //         || target.1 < 0
-    //         || target.1 >= self.dimensions.1 as i32
-    //     {
-    //         return None;
-    //     }
-
-    //     // check if we're sharing a triangle cell
-    //     if let CellContents::Double(a, b) = self.cell_map.get(player) {
-    //         // get the shape of the other block
-    //     }
-
-    //     // 08/06 pickup
-    //     // need to determine whether or not segment should hold a reference back to block or not?
-    //     // either way, segment in the cellmap should hold block information
-    //     // maybe cellmap should just carry a block index? seems hacky
-    //     // using refs to manage the whole thing is messy and probably doesn't work
-    //     // ???
-
-    //     Some(())
-    // }
 
     pub fn render(&self, renderer: &mut Renderer, animations: &AnimationState) {
         // board positioning calculations

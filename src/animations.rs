@@ -8,17 +8,27 @@ pub type AnimationFn = Box<Fn(BlockOffsets, f32) -> BlockOffsets>;
 
 const ANIMATION_DURATION: f32 = 1.0 / 6.0;
 
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct AnimationState {
     pub is_animating: bool,
     pub last_move_success: bool,
     pub progress: f32,
     pub block_offsets: BlockOffsets,
-
+    #[serde(skip)]
     progress_function: Option<AnimationFn>,
 }
 
 impl AnimationState {
+    pub fn new() -> Self {
+        AnimationState {
+            is_animating: false,
+            last_move_success: true,
+            progress: 0.0,
+            block_offsets: BlockOffsets::new(),
+            progress_function: None,
+        }
+    }
+
     pub fn begin_transition(&mut self, f: AnimationFn) {
         self.is_animating = true;
         self.progress = 0.0;

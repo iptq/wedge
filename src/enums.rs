@@ -35,7 +35,7 @@ impl From<u32> for Orientation {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum PushDir {
     Up,
     Down,
@@ -63,6 +63,10 @@ impl Add<PushDir> for (i32, i32, Board) {
     }
 }
 
+//  /\
+// /21\
+// \34/
+//  \/
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 pub enum Shape {
     Full = 0,

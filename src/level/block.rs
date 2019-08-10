@@ -15,16 +15,14 @@ pub trait Blockish {
 pub struct Block {
     index: usize,
     pub movable: bool,
-    position: (i32, i32),
     color: Color,
-    orientation: Orientation,
-    segments: Vec<Segment>,
+    pub orientation: Orientation,
+    pub segments: Vec<Segment>,
 }
 
 impl Block {
     pub fn from_data(index: usize, data: &BlockData) -> Self {
         let movable = data.movable;
-        let position = (data.position.0, data.position.1);
         let segments = data
             .segments
             .iter()
@@ -43,7 +41,6 @@ impl Block {
         Block {
             index,
             movable,
-            position,
             color,
             segments,
             orientation,

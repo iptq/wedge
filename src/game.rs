@@ -50,7 +50,7 @@ impl<'a> Game<'a> {
             levels,
             current_level: 0,
             keymap: HashMap::new(),
-            animations: AnimationState::default(),
+            animations: AnimationState::new(),
         }
     }
 
@@ -97,8 +97,10 @@ impl<'a> Game<'a> {
         macro_rules! shit {
             ($key:expr, $board:expr, $direction:expr) => {
                 if self.is_pressed(&$key) {
+                    println!("pushed: {:?}", $key);
                     let level = self.get_current_level_mut();
                     let result = level.try_move($board, $direction);
+                    println!("game result: {:?}", result);
                     self.keymap.insert($key, false);
                 }
             };
