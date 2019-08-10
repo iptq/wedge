@@ -14,7 +14,7 @@ pub trait Blockish {
 #[derive(Clone)]
 pub struct Block {
     index: usize,
-    movable: bool,
+    pub movable: bool,
     position: (i32, i32),
     color: Color,
     orientation: Orientation,

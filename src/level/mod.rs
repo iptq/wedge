@@ -4,7 +4,7 @@ mod player;
 
 use std::collections::{HashMap, VecDeque};
 
-use crate::animations::BlockOffsets;
+use crate::animations::AnimationState;
 use crate::color::Color;
 use crate::data::LevelData;
 use crate::enums::{Board, Orientation, PushDir, Shape};
@@ -83,122 +83,146 @@ impl Level {
         }
     }
 
-    // player1: true -> player1, false -> player2
-    // TODO: don't use a boolean here
-    pub fn handle_movement(&mut self, player1: bool, direction: PushDir) -> bool {
-        let player = if player1 {
-            &self.player1
-        } else {
-            &self.player2
-        };
+    // pub fn handle_movement(&mut self, board: Board, direction: PushDir) -> bool {
+    //     let player = match board {
+    //         Board::Left => &self.player1,
+    //         Board::Right => &self.player2
+    //     };
 
-        // TODO: check out of bounds
-        let movement = direction.as_pair();
-        let x = player.position.0 + movement.0;
-        let y = player.position.1 + movement.1;
+    //     // TODO: check out of bounds
+    //     let movement = direction.as_pair();
+    //     let x = player.position.0 + movement.0;
+    //     let y = player.position.1 + movement.1;
 
-        let result = self.can_move(player1, direction).clone();
-        let mut player = if player1 {
-            &mut self.player1
-        } else {
-            &mut self.player2
-        };
+    //     let result = self.can_move(player1, direction).clone();
+    //     let player = match board {
+    //         Board::Left => &mut self.player1,
+    //         Board::Right => &mut self.player2
+    //     };
 
-        if let Some(_) = result {
-            player.position.0 = x;
-            player.position.1 = y;
-            true
-        } else {
-            false
-        }
+    //     if let Some(_) = result {
+    //         player.position.0 = x;
+    //         player.position.1 = y;
+    //         true
+    //     } else {
+    //         false
+    //     }
+    // }
+
+    pub fn try_move(&self, board: Board, direction: PushDir) {
+        let result = self.player_can_move(board, direction);
+        println!("result: {:?}", result);
     }
 
-    pub fn try_move(&self) {}
+    fn player_can_move(&self, board: Board, direction: PushDir) {}
 
-    fn block_can_move(&self, block: impl Blockish) {
-        for segment in block.get_segments() {}
-    }
+    fn block_can_move(&self, index: usize, direction: PushDir) -> Option<()> {
+        let block = match self.blocks.get(index) {
+            Some(block) => block,
+            None => return None,
+        };
 
-    fn segment_can_move(&self, block: Block, segment: Segment, direction: PushDir) -> Option<()> {
-        let triple = (segment.position.0, segment.position.1, segment.board);
-        let target = triple + direction;
-
-        // is the target in the map?
-        if target.0 < 0
-            || target.0 >= self.dimensions.0 as i32
-            || target.1 < 0
-            || target.1 >= self.dimensions.1 as i32
-        {
+        // is the block even movable?
+        if !block.movable {
             return None;
         }
 
-        // check if we're sharing a triangle cell
-        if let CellContents::Double((ind1, block1), (ind2, block2)) = self.cell_map.get(triple) {
-            // figure out which one is the other block
-
-            // check that we're pushing in the direction of the other block
-
+        for segment in block.get_segments() {
+            let result = self.segment_can_move(Some(index), segment, direction);
         }
-
         Some(())
     }
 
-    // TODO: don't use a boolean here
-    pub fn can_move(&self, player1: bool, direction: PushDir) -> Option<()> {
-        // an absolute segment (as opposed to relative to a block)
-        #[derive(Copy, Clone, PartialOrd, PartialEq)]
-        struct ASegment(i32, i32, Shape, Board);
-
-        struct PushMap(CellMap);
-
-        fn can_push_segment(src: ASegment, dst: ASegment) -> bool {
-            if src.3 != dst.3 {
-                return false;
-            }
-
-            true
-        }
-
-        let player = if player1 {
-            (
-                self.player1.position.0,
-                self.player1.position.1,
-                Board::Left,
-            )
-        } else {
-            (
-                self.player2.position.0,
-                self.player2.position.1,
-                Board::Right,
-            )
-        };
-
-        // check to make sure that the player isn't trying to go out of bounds
-        let target = player + direction;
-        if target.0 < 0
-            || target.0 >= self.dimensions.0 as i32
-            || target.1 < 0
-            || target.1 >= self.dimensions.1 as i32
-        {
-            return None;
-        }
-
-        // check if we're sharing a triangle cell
-        if let CellContents::Double(a, b) = self.cell_map.get(player) {
-            // get the shape of the other block
-        }
-
-        // 08/06 pickup
-        // need to determine whether or not segment should hold a reference back to block or not?
-        // either way, segment in the cellmap should hold block information
-        // maybe cellmap should just carry a block index? seems hacky
-        // using refs to manage the whole thing is messy and probably doesn't work
-        // ???
-
+    fn segment_can_move(
+        &self,
+        block_index: Option<usize>,
+        segment: Segment,
+        direction: PushDir,
+    ) -> Option<()> {
+        let segment_loc = (segment.position.0, segment.position.1, segment.board);
+        let target = segment_loc + direction;
         Some(())
     }
 
-    pub fn render(&self, renderer: &mut Renderer, block_offsets: &BlockOffsets) {
+    // fn segment_can_move(&self, block: Block, segment: Segment, direction: PushDir) -> Option<()> {
+    //     let triple = (segment.position.0, segment.position.1, segment.board);
+    //     let target = triple + direction;
+
+    //     // is the target in the map?
+    //     if target.0 < 0
+    //         || target.0 >= self.dimensions.0 as i32
+    //         || target.1 < 0
+    //         || target.1 >= self.dimensions.1 as i32
+    //     {
+    //         return None;
+    //     }
+
+    //     // check if we're sharing a triangle cell
+    //     if let CellContents::Double((ind1, block1), (ind2, block2)) = self.cell_map.get(triple) {
+    //         // figure out which one is the other block
+
+    //         // check that we're pushing in the direction of the other block
+
+    //     }
+
+    //     Some(())
+    // }
+
+    // pub fn can_move(&self, board: Board, direction: PushDir) -> Option<()> {
+    //     // an absolute segment (as opposed to relative to a block)
+    //     #[derive(Copy, Clone, PartialOrd, PartialEq)]
+    //     struct ASegment(i32, i32, Shape, Board);
+
+    //     struct PushMap(CellMap);
+
+    //     fn can_push_segment(src: ASegment, dst: ASegment) -> bool {
+    //         if src.3 != dst.3 {
+    //             return false;
+    //         }
+
+    //         true
+    //     }
+
+    //     let player = if player1 {
+    //         (
+    //             self.player1.position.0,
+    //             self.player1.position.1,
+    //             Board::Left,
+    //         )
+    //     } else {
+    //         (
+    //             self.player2.position.0,
+    //             self.player2.position.1,
+    //             Board::Right,
+    //         )
+    //     };
+
+    //     // check to make sure that the player isn't trying to go out of bounds
+    //     let target = player + direction;
+    //     if target.0 < 0
+    //         || target.0 >= self.dimensions.0 as i32
+    //         || target.1 < 0
+    //         || target.1 >= self.dimensions.1 as i32
+    //     {
+    //         return None;
+    //     }
+
+    //     // check if we're sharing a triangle cell
+    //     if let CellContents::Double(a, b) = self.cell_map.get(player) {
+    //         // get the shape of the other block
+    //     }
+
+    //     // 08/06 pickup
+    //     // need to determine whether or not segment should hold a reference back to block or not?
+    //     // either way, segment in the cellmap should hold block information
+    //     // maybe cellmap should just carry a block index? seems hacky
+    //     // using refs to manage the whole thing is messy and probably doesn't work
+    //     // ???
+
+    //     Some(())
+    // }
+
+    pub fn render(&self, renderer: &mut Renderer, animations: &AnimationState) {
         // board positioning calculations
         let playfield_ratio = (2 * self.dimensions.0 + 6) as f32 / (self.dimensions.1 + 4) as f32;
         let screen_ratio = renderer.window.0 / renderer.window.1;
@@ -216,7 +240,7 @@ impl Level {
             (scale, xoff, 0)
         };
 
-        self.render_boards(renderer, scale, (xoff, yoff), block_offsets);
+        self.render_boards(renderer, scale, (xoff, yoff), animations);
     }
 
     fn render_boards(
@@ -224,7 +248,7 @@ impl Level {
         renderer: &mut Renderer,
         scale: i32,
         offset: (i32, i32),
-        block_offsets: &BlockOffsets,
+        animations: &AnimationState,
     ) {
         let left_off = (offset.0 + 2 * scale, offset.1 + 2 * scale);
         let right_off = (
@@ -242,16 +266,19 @@ impl Level {
         }
 
         // render blocks
-        for block in self.blocks.iter() {
+        for (i, block) in self.blocks.iter().enumerate() {
             for segment in block.get_segments().iter() {
                 let offset = match &segment.board {
                     Board::Left => left_off,
                     Board::Right => right_off,
                 };
-                let location = (
+                let mut location = (
                     offset.0 + segment.position.0 * scale,
                     offset.1 + segment.position.1 * scale,
                 );
+                let animation_offset = animations.get_offset(i);
+                location.0 += animation_offset.0;
+                location.1 += animation_offset.1;
                 renderer.render_segment(
                     location,
                     scale,

@@ -5,7 +5,7 @@ use glium::glutin::{ElementState, Event, VirtualKeyCode, WindowEvent};
 use glium::{Display, Frame};
 
 use crate::animations::AnimationState;
-use crate::enums::PushDir;
+use crate::enums::{Board, PushDir};
 use crate::level::Level;
 use crate::renderer::Renderer;
 use crate::resources::Resources;
@@ -95,10 +95,10 @@ impl<'a> Game<'a> {
 
     pub fn update(&mut self, delta: Duration) {
         macro_rules! shit {
-            ($key:expr, $player:expr, $movement:expr) => {
+            ($key:expr, $board:expr, $direction:expr) => {
                 if self.is_pressed(&$key) {
                     let level = self.get_current_level_mut();
-                    let result = level.handle_movement($player, $movement);
+                    let result = level.try_move($board, $direction);
                     self.keymap.insert($key, false);
                 }
             };
@@ -112,15 +112,15 @@ impl<'a> Game<'a> {
             } else {
             }
         } else {
-            shit!(VirtualKeyCode::W, true, PushDir::Up);
-            shit!(VirtualKeyCode::A, true, PushDir::Left);
-            shit!(VirtualKeyCode::S, true, PushDir::Down);
-            shit!(VirtualKeyCode::D, true, PushDir::Right);
+            shit!(VirtualKeyCode::W, Board::Left, PushDir::Up);
+            shit!(VirtualKeyCode::A, Board::Left, PushDir::Left);
+            shit!(VirtualKeyCode::S, Board::Left, PushDir::Down);
+            shit!(VirtualKeyCode::D, Board::Left, PushDir::Right);
 
-            shit!(VirtualKeyCode::I, false, PushDir::Up);
-            shit!(VirtualKeyCode::J, false, PushDir::Left);
-            shit!(VirtualKeyCode::K, false, PushDir::Down);
-            shit!(VirtualKeyCode::L, false, PushDir::Right);
+            shit!(VirtualKeyCode::I, Board::Right, PushDir::Up);
+            shit!(VirtualKeyCode::J, Board::Right, PushDir::Left);
+            shit!(VirtualKeyCode::K, Board::Right, PushDir::Down);
+            shit!(VirtualKeyCode::L, Board::Right, PushDir::Right);
 
             // failed a move
             if !self.animations.last_move_success {
@@ -135,6 +135,6 @@ impl<'a> Game<'a> {
 
     pub fn render(&self, renderer: &mut Renderer) {
         let level = self.get_current_level();
-        level.render(renderer, &self.animations.block_offsets);
+        level.render(renderer, &self.animations);
     }
 }
