@@ -100,18 +100,29 @@ impl<'a> Game<'a> {
                     println!("pushed: {:?}", $key);
                     let level = self.get_current_level_mut();
                     let result = level.try_move($board, $direction);
-                    println!("game result: {:?}", result);
+                    self.animations.begin_move_transition(result);
                     self.keymap.insert($key, false);
                 }
             };
         }
 
         if self.animations.is_animating {
-            if self.animations.last_move_success {
-                if self.animations.is_done() {
-                    self.animations.make_progress(delta);
+            println!("animating. {:?}", self.animations.progress);
+            self.animations.make_progress(delta);
+
+            // we just finished!
+            if !self.animations.is_animating {
+                // apply the changes to the entities
+                // this indirection is used to dodge a concurrent borrow
+                let change_set = if let Some(Ok(change_set)) = &self.animations.last_move_result {
+                    Some(change_set.clone())
+                } else {
+                    None
+                };
+                if let Some(change_set) = change_set {
+                    let level = self.get_current_level_mut();
+                    level.apply_change_set(change_set.clone());
                 }
-            } else {
             }
         } else {
             shit!(VirtualKeyCode::W, Board::Left, PushDir::Up);
@@ -125,13 +136,7 @@ impl<'a> Game<'a> {
             shit!(VirtualKeyCode::L, Board::Right, PushDir::Right);
 
             // failed a move
-            if !self.animations.last_move_success {
-                let func = |mut offsets: HashMap<_, _>, prog| {
-                    offsets.insert(0, (0, 0));
-                    offsets
-                };
-                self.animations.begin_transition(Box::new(func));
-            }
+            if let Some(Err(fail_set)) = &self.animations.last_move_result {}
         }
     }
 

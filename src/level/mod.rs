@@ -96,38 +96,33 @@ impl Level {
         }
     }
 
-    pub fn try_move(&mut self, board: Board, direction: PushDir) {
-        let mut change_set = ChangeSet::default();
-        change_set.insert(Entity::Player(board), direction);
-
-        let result = self.player_can_move(board, direction, change_set);
-
-        match result {
-            Ok(change_set) => {
-                println!("change_set: {:?}", change_set);
-                for (entity, direction) in change_set {
-                    let direction = direction.as_pair();
-                    match entity {
-                        Entity::Player(board) => {
-                            let player = match board {
-                                Board::Left => &mut self.player1,
-                                Board::Right => &mut self.player2,
-                            };
-                            player.position.0 += direction.0;
-                            player.position.1 += direction.1;
-                        }
-                        Entity::Block(index) => {
-                            let block = self.blocks.get_mut(index).expect("big failure");
-                            for segment in &mut block.segments {
-                                segment.position.0 += direction.0;
-                                segment.position.1 += direction.1;
-                            }
-                        }
+    pub fn apply_change_set(&mut self, change_set: ChangeSet) {
+        for (entity, direction) in change_set {
+            let direction = direction.as_pair();
+            match entity {
+                Entity::Player(board) => {
+                    let player = match board {
+                        Board::Left => &mut self.player1,
+                        Board::Right => &mut self.player2,
+                    };
+                    player.position.0 += direction.0;
+                    player.position.1 += direction.1;
+                }
+                Entity::Block(index) => {
+                    let block = self.blocks.get_mut(index).expect("big failure");
+                    for segment in &mut block.segments {
+                        segment.position.0 += direction.0;
+                        segment.position.1 += direction.1;
                     }
                 }
             }
-            Err(fail_set) => {}
-        };
+        }
+    }
+
+    pub fn try_move(&mut self, board: Board, direction: PushDir) -> Result<ChangeSet, FailSet> {
+        let mut change_set = ChangeSet::default();
+        change_set.insert(Entity::Player(board), direction);
+        self.player_can_move(board, direction, change_set)
     }
 
     fn player_can_move(
@@ -369,9 +364,9 @@ impl Level {
                     offset.0 + segment.position.0 * scale,
                     offset.1 + segment.position.1 * scale,
                 );
-                let animation_offset = animations.get_offset(i);
-                location.0 += animation_offset.0;
-                location.1 += animation_offset.1;
+                let animation_offset = animations.get_block_offset(i);
+                location.0 += (animation_offset.0 * scale as f32) as i32;
+                location.1 += (animation_offset.1 * scale as f32) as i32;
                 renderer.render_segment(
                     location,
                     scale,
@@ -383,21 +378,40 @@ impl Level {
         }
 
         // render player
-        self.render_player(renderer, &self.player1, scale, left_off);
-        self.render_player(renderer, &self.player2, scale, right_off);
+        self.render_player(
+            renderer,
+            Board::Left,
+            &self.player1,
+            scale,
+            animations,
+            left_off,
+        );
+        self.render_player(
+            renderer,
+            Board::Right,
+            &self.player2,
+            scale,
+            animations,
+            right_off,
+        );
     }
 
     fn render_player(
         &self,
         renderer: &mut Renderer,
+        board: Board,
         player: &Player,
         scale: i32,
+        animations: &AnimationState,
         offset: (i32, i32),
     ) {
-        let location = (
+        let mut location = (
             offset.0 + player.position.0 * scale + 4,
             offset.1 + player.position.1 * scale + 4,
         );
+        let animation_offset = animations.get_player_offset(board);
+        location.0 += (animation_offset.0 * scale as f32) as i32;
+        location.1 += (animation_offset.1 * scale as f32) as i32;
         renderer.render_segment(
             location,
             (scale - 8),
