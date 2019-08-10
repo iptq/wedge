@@ -18,6 +18,7 @@ const CELL_FRAG: &str = include_str!("../shaders/cell.frag");
 const SEGMENT_IMAGE: &[u8] = include_bytes!("../textures/segment.png");
 
 const LEVEL_TUTORIAL: &str = include_str!("../levels/tutorial.json");
+const LEVEL_TUTORIAL2: &str = include_str!("../levels/tutorial2.json");
 
 pub struct Game<'a> {
     pub resources: Resources,
@@ -41,7 +42,10 @@ impl<'a> Game<'a> {
             .load_shader(display, "cell", &CELL_VERT, &CELL_FRAG)
             .unwrap();
 
-        let levels = vec![Level::from_json(&LEVEL_TUTORIAL)];
+        let levels = vec![
+            Level::from_json(&LEVEL_TUTORIAL),
+            Level::from_json(&LEVEL_TUTORIAL2),
+        ];
         Game {
             resources,
             display,

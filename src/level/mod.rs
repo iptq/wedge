@@ -7,6 +7,7 @@ mod player;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::animations::AnimationState;
+use crate::color::Color;
 use crate::data::LevelData;
 use crate::enums::{Board, Orientation, PushDir, Shape};
 use crate::renderer::Renderer;
@@ -20,8 +21,8 @@ pub struct Level {
     blocks: Vec<Block>,
     player1: Player,
     player2: Player,
-    goal1: (u32, u32),
-    goal2: (u32, u32),
+    goal1: (i32, i32),
+    goal2: (i32, i32),
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
@@ -75,10 +76,7 @@ impl Level {
 
     // check if we won
     pub fn check_win_condition(&self) -> bool {
-        self.player1.position.0 as u32 == self.goal1.0
-            && self.player1.position.1 as u32 == self.goal1.1
-            && self.player2.position.0 as u32 == self.goal2.0
-            && self.player2.position.1 as u32 == self.goal2.1
+        self.player1.position == self.goal1 && self.player2.position == self.goal2
     }
 
     pub fn apply_change_set(&mut self, change_set: ChangeSet) {
@@ -363,6 +361,10 @@ impl Level {
             }
         }
 
+        // render goals
+        self.render_goal(renderer, self.goal1, scale, left_off);
+        self.render_goal(renderer, self.goal2, scale, right_off);
+
         // render player
         self.render_player(
             renderer,
@@ -402,6 +404,26 @@ impl Level {
             location,
             scale - 8,
             player.color,
+            Orientation::Both,
+            Shape::Full,
+        );
+    }
+
+    fn render_goal(
+        &self,
+        renderer: &mut Renderer,
+        location: (i32, i32),
+        scale: i32,
+        offset: (i32, i32),
+    ) {
+        let position = (
+            offset.0 + location.0 * scale + 4,
+            offset.1 + location.1 * scale + 4,
+        );
+        renderer.render_segment(
+            position,
+            scale - 8,
+            Color::from_rgb_u32(102, 204, 102),
             Orientation::Both,
             Shape::Full,
         );

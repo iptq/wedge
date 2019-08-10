@@ -17,7 +17,7 @@ pub struct LevelData {
     pub dimensions: [u32; 2],
     pub player1: PlayerData,
     pub player2: PlayerData,
-    pub goal1: (u32, u32),
-    pub goal2: (u32, u32),
+    pub goal1: (i32, i32),
+    pub goal2: (i32, i32),
     pub blocks: Vec<BlockData>,
 }
