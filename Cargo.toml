@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Michael Zhang <iptq@protonmail.com>"]
 edition = "2018"
 
+[profile.release]
+opt-level = 'z'
+lto = true
+panic = 'abort'
+
 [dependencies]
 glium = "0.25"
 image = "0.21"
