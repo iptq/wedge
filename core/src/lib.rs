@@ -29,6 +29,16 @@ pub use crate::platform::Platform;
 const GAME_WIDTH: u32 = 1024;
 const GAME_HEIGHT: u32 = 768;
 
+pub fn run_with<P: Platform>(platform: P) {
+    let mut closed = false;
+    let mut prev = Instant::now();
+
+    while !closed {
+        let now = Instant::now();
+        let delta = now - prev;
+    }
+}
+
 fn main() {
     let mut events_loop = EventsLoop::new();
     let primary_monitor = events_loop.get_primary_monitor();

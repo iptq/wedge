@@ -1,5 +1,10 @@
 mod platform;
 
+use wedge_core::Platform;
+
+use crate::platform::DesktopPlatform;
+
 fn main() {
-    println!("Hello, world!");
+    let platform = DesktopPlatform::create();
+    wedge_core::run_with(platform);
 }
