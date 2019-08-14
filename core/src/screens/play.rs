@@ -20,10 +20,9 @@ pub struct PlayScreen {
 
 impl Screen for PlayScreen {
     fn update(&mut self, delta: Duration, keymap: &Keymap) -> ScreenAction {
-        macro_rules! shit {
+        macro_rules! trigger_move {
             ($key:expr, $board:expr, $direction:expr) => {
                 if keymap.is_pressed($key) {
-                    println!("pushed: {:?}", $key);
                     let level = self.get_current_level_mut();
                     let result = level.try_move($board, $direction);
                     self.animations.begin_move_transition(result);
@@ -32,7 +31,6 @@ impl Screen for PlayScreen {
         }
 
         if self.animations.is_animating {
-            // println!("animating. {:?}", self.animations.progress);
             self.animations.make_progress(delta);
 
             // we just finished!
@@ -51,15 +49,19 @@ impl Screen for PlayScreen {
                 }
             }
         } else {
-            shit!(VirtualKeyCode::W, Board::Left, PushDir::Up);
-            shit!(VirtualKeyCode::A, Board::Left, PushDir::Left);
-            shit!(VirtualKeyCode::S, Board::Left, PushDir::Down);
-            shit!(VirtualKeyCode::D, Board::Left, PushDir::Right);
+            trigger_move!(VirtualKeyCode::W, Board::Left, PushDir::Up);
+            trigger_move!(VirtualKeyCode::A, Board::Left, PushDir::Left);
+            trigger_move!(VirtualKeyCode::S, Board::Left, PushDir::Down);
+            trigger_move!(VirtualKeyCode::D, Board::Left, PushDir::Right);
 
-            shit!(VirtualKeyCode::I, Board::Right, PushDir::Up);
-            shit!(VirtualKeyCode::J, Board::Right, PushDir::Left);
-            shit!(VirtualKeyCode::K, Board::Right, PushDir::Down);
-            shit!(VirtualKeyCode::L, Board::Right, PushDir::Right);
+            trigger_move!(VirtualKeyCode::I, Board::Right, PushDir::Up);
+            trigger_move!(VirtualKeyCode::J, Board::Right, PushDir::Left);
+            trigger_move!(VirtualKeyCode::K, Board::Right, PushDir::Down);
+            trigger_move!(VirtualKeyCode::L, Board::Right, PushDir::Right);
+        }
+
+        if keymap.is_pressed(VirtualKeyCode::Escape) {
+            return ScreenAction::Pop(1);
         }
 
         ScreenAction::None

@@ -34,7 +34,6 @@ impl AnimationState {
     }
 
     pub fn begin_move_transition(&mut self, result: MoveResult) {
-        println!("result: {:?}", result);
         self.last_move_result = Some(result);
         self.is_animating = true;
         self.progress = 0.0;

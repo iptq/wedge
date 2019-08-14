@@ -45,7 +45,6 @@ pub type FailSet = HashSet<usize>;
 impl Level {
     pub fn from_json(data: impl AsRef<str>) -> Level {
         let data: LevelData = json5::from_str(data.as_ref()).unwrap();
-        println!("level data: {:?}", data);
 
         let blocks = data
             .blocks
@@ -64,7 +63,7 @@ impl Level {
         };
 
         Level {
-            dimensions: (data.dimensions[0], data.dimensions[1]),
+            dimensions: (data.dimensions.0, data.dimensions.1),
             move_stack: VecDeque::new(),
             blocks,
             player1,
@@ -132,7 +131,6 @@ impl Level {
         direction: PushDir,
         mut change_set: ChangeSet,
     ) -> Result<ChangeSet, FailSet> {
-        println!("block_can_move({:?}, {:?})", index, direction);
         let block = match self.blocks.get(index) {
             Some(block) => block,
             None => return Err(HashSet::new()),
@@ -172,10 +170,6 @@ impl Level {
         direction: PushDir,
         change_set: ChangeSet,
     ) -> Result<ChangeSet, FailSet> {
-        println!(
-            "segment_can_move({:?}, {:?}, {:?})",
-            block_index, segment, direction
-        );
         let segment_loc = (segment.position.0, segment.position.1, segment.board);
         let target = segment_loc + direction;
 
@@ -223,11 +217,6 @@ impl Level {
                 }
             }
         }
-
-        println!(
-            "  occupants: {:?} | {:?}",
-            current_occupant, target_occupant
-        );
 
         // handle special pushes
         if let Some((other_block, other_shape)) = current_occupant {

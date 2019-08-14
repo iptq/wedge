@@ -1,3 +1,4 @@
+mod editor;
 mod menu;
 mod play;
 
@@ -7,6 +8,7 @@ use std::time::Duration;
 use crate::keymap::Keymap;
 use crate::renderer::Renderer;
 
+pub use self::editor::EditorScreen;
 pub use self::menu::MenuScreen;
 pub use self::play::PlayScreen;
 
@@ -21,6 +23,7 @@ pub trait Screen {
 pub enum ScreenAction {
     None,
     Push(Box<dyn Screen>),
+    Pop(usize),
 }
 
 pub struct ScreenStack(Vec<Box<dyn Screen>>);
@@ -46,17 +49,20 @@ impl ScreenStack {
             let screen = screen.as_mut();
             screen.update(delta, keymap)
         };
+
         match result {
             ScreenAction::None => (),
             ScreenAction::Push(new_screen) => {
-                println!("pushed new screen");
                 self.0.push(new_screen);
+            }
+            ScreenAction::Pop(n) => {
+                self.0.truncate(self.0.len() - 1);
             }
         }
     }
 
     pub fn render(&self, renderer: &mut Renderer) {
-        let mut screen = self.top();
+        let screen = self.top();
         let screen = screen.as_ref();
         screen.render(renderer)
     }

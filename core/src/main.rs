@@ -11,6 +11,7 @@ mod enums;
 mod game;
 mod keymap;
 mod level;
+mod platform;
 mod renderer;
 mod resources;
 mod screens;
@@ -22,6 +23,8 @@ use glium::glutin::{ContextBuilder, Event, EventsLoop, WindowBuilder, WindowEven
 use glium::{Display, Surface};
 
 use crate::game::Game;
+
+pub use crate::platform::Platform;
 
 const GAME_WIDTH: u32 = 1024;
 const GAME_HEIGHT: u32 = 768;
@@ -42,7 +45,6 @@ fn main() {
     {
         let gl_window = display.gl_window();
         let window = gl_window.window();
-        println!("size: {:?}", window.get_inner_size());
     }
 
     let mut game = Game::new(&display);
