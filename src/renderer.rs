@@ -6,13 +6,14 @@ use nalgebra::{Matrix4, Vector4};
 use crate::color::Color;
 use crate::enums::{Orientation, Shape};
 use crate::game::Game;
+use crate::platform::GlslProgram;
 
 pub struct Renderer<'a, 'b> {
     pub window: (f32, f32),
     target: &'a mut Frame,
     display: &'b Display,
-    cell_program: &'b Program,
-    segment_program: &'b Program,
+    cell_program: &'b GlslProgram,
+    segment_program: &'b GlslProgram,
     segment_texture: &'b Texture2d,
 }
 

@@ -1,11 +1,10 @@
 use std::time::Duration;
 
-use glium::glutin::VirtualKeyCode;
-
 use crate::animations::AnimationState;
 use crate::enums::{Board, PushDir};
 use crate::keymap::Keymap;
 use crate::level::Level;
+use crate::platform::KeyCode;
 use crate::renderer::Renderer;
 use crate::screens::{Screen, ScreenAction};
 
@@ -49,18 +48,18 @@ impl Screen for PlayScreen {
                 }
             }
         } else {
-            trigger_move!(VirtualKeyCode::W, Board::Left, PushDir::Up);
-            trigger_move!(VirtualKeyCode::A, Board::Left, PushDir::Left);
-            trigger_move!(VirtualKeyCode::S, Board::Left, PushDir::Down);
-            trigger_move!(VirtualKeyCode::D, Board::Left, PushDir::Right);
+            trigger_move!(KeyCode::W, Board::Left, PushDir::Up);
+            trigger_move!(KeyCode::A, Board::Left, PushDir::Left);
+            trigger_move!(KeyCode::S, Board::Left, PushDir::Down);
+            trigger_move!(KeyCode::D, Board::Left, PushDir::Right);
 
-            trigger_move!(VirtualKeyCode::I, Board::Right, PushDir::Up);
-            trigger_move!(VirtualKeyCode::J, Board::Right, PushDir::Left);
-            trigger_move!(VirtualKeyCode::K, Board::Right, PushDir::Down);
-            trigger_move!(VirtualKeyCode::L, Board::Right, PushDir::Right);
+            trigger_move!(KeyCode::I, Board::Right, PushDir::Up);
+            trigger_move!(KeyCode::J, Board::Right, PushDir::Left);
+            trigger_move!(KeyCode::K, Board::Right, PushDir::Down);
+            trigger_move!(KeyCode::L, Board::Right, PushDir::Right);
         }
 
-        if keymap.is_pressed(VirtualKeyCode::Escape) {
+        if keymap.is_pressed(KeyCode::Escape) {
             return ScreenAction::Pop(1);
         }
 
