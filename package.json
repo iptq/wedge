@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "typescript": "^4.6.4",
+    "vite": "^2.9.9",
+    "zod": "^3.16.0"
+  }
+}

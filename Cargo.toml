@@ -1,7 +1,0 @@
-[workspace]
-members = ["core", "desktop", "web"]
-
-[profile.release]
-opt-level = 'z'
-lto = true
-panic = 'abort'

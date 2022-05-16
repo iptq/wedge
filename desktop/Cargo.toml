@@ -1,9 +1,0 @@
-[package]
-name = "wedge_desktop"
-version = "0.1.0"
-authors = ["Michael Zhang <iptq@protonmail.com>"]
-edition = "2018"
-
-[dependencies]
-glium = "0.25"
-wedge_core = { path = "../core" }
